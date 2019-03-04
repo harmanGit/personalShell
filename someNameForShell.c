@@ -9,33 +9,34 @@
 #define INDICATOR "~~>"
 #define SHELLNAME "someNameForShell"
 
+void userInputLoop();
 void shellIndicator();
 void lowercaseUserInput(char *rawUserInput, int userInputLength);
-void parseUserInput(char *rawUserInput,char **userInputArray);
+void parseUserInput(char *rawUserInput,char *userInputArray[]);
 void changeDirectory();
+int stringCompare(char *firstString, char *secondString);
 
 
 void userInputLoop(){
 	size_t userInputLength = 128;
-	int maxTokens = 3;
+	int maxTokens = 4;
 	char *userInputTokenArray[maxTokens];
 	char *rawUserInput;
-	char *exit = "exit";//char *exit = "exit";
+	char *exit = "exit";
 
-	//printf ("	You entered: %s\n", rawUserInput);
-	
 	do {
-	shellIndicator();
+	  shellIndicator();
 		getline (&rawUserInput, &userInputLength, stdin);
 		lowercaseUserInput(rawUserInput,userInputLength);
-		//printf ("before the parsing: %s", rawUserInput);
 		parseUserInput(rawUserInput, userInputTokenArray);
-		
-		int i;
-		for (i = 0; i < 3; ++i) 
-				printf("%s\n", userInputTokenArray[i]);
-	} while( strcmp(exit, userInputTokenArray[0]) != 0 );
-	//loop runs as long as the first word isnt exit
+
+		//stringCompare("exit", userInputTokenArray[0]);
+		if(strcmp(exit,userInputTokenArray[0]) == 0)
+			printf("I FUCKING WORK :/\n" );
+
+	} while(1);	//loop runs as long as the first word isnt exit
+
+	printf("Goodbye!\n");
 }
 
 void shellIndicator(){
@@ -50,7 +51,8 @@ void lowercaseUserInput(char *rawUserInput, int userInputLength){
 		}
 }
 
-void parseUserInput(char *rawUserInput,char **userInputArray){
+void parseUserInput(char *rawUserInput,char *userInputArray[]){
+	rawUserInput[strlen(rawUserInput) - 1] = '\0'; //removing newline
 
 	int i = 0;
 	char *temp = strtok (rawUserInput, " ");
@@ -69,5 +71,5 @@ void changeDirectory(){
 int main(int argc, char *argv[])
 {
 	userInputLoop();
-   return 0;
+  return 0;
 }
