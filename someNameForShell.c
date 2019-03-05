@@ -103,6 +103,7 @@ void userInputLoop(){
 		parseUserInput(rawUserInput, userInputTokenArray);
 		getCommand(userInputTokenArray);
 		printOutMainArray(userInputTokenArray);
+		free(userInputTokenArray);
 
 	} while(1);	//loop runs as long as the first word isnt exit
 	free(userInputTokenArray);
