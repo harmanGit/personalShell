@@ -5,6 +5,7 @@
 #include <unistd.h> //fork, execlp, pipe
 #include<string.h>
 #include <ctype.h>
+#include <limits.h>
 
 #define INDICATOR "~~>"
 #define SHELLNAME "someNameForShell"
@@ -13,9 +14,10 @@ void userInputLoop();
 void shellIndicator();
 void lowercaseUserInput(char *rawUserInput, int userInputLength);
 void parseUserInput(char *rawUserInput,char **userInputArray);
-void changeDirectory();
-void changeDirectory(char *userInput);
-void getCommand(char *userInput);
+void listDirectory();
+void changeDirectory(char **userInputTokenArray);
+void getCommand(char **userInputTokenArray);
+char* commandGenerator(char **userInputTokenArray);
 void printOutMainArray(char **userInputArray);//BUG REMOVE THIS
 
 
@@ -46,23 +48,44 @@ void parseUserInput(char *rawUserInput,char **userInputArray){
 }
 
 //SHELL FUNCTIONS
-void getCommand(char *userInput){
+char* commandGenerator(char **userInputTokenArray){
+	char *result = malloc(4);
+    strcpy(result, userInputTokenArray[0]);
+    strcat(result, userInputTokenArray[1]);
+    return result;
+	//int i;
+//for(i = 0; (strcmp(userInputTokenArray[i], "|")) != 0 ||
+	//userInputTokenArray[i] != NULL; i++)
+//	  strncat(s, s,userInputTokenArray[i]);
+}
 
-	if (strcmp(userInput, "exit") == 0)
+void getCommand(char **userInputTokenArray){
+	char *firstCommand = userInputTokenArray[0];
+
+	if (strcmp(firstCommand, "exit") == 0)
 	{
 		printf("Goodbye!\n");
 		exit(0);
 	}
-	else if (strcmp(userInput, "cd") == 0)
+	else if (strcmp(firstCommand, "cd") == 0)
 	{
 	  printf("CD pressed!\n");
-		changeDirectory(userInput);
+		changeDirectory(userInputTokenArray);
+	}else if (strcmp(firstCommand, "ls") == 0)
+	{
+		  listDirectory();
 	}else
 		printf("Invalid Input\n");
 }
 
-void changeDirectory(char *userInput){
-	chdir(userInput);
+void listDirectory(){
+	char cwd[PATH_MAX];
+   if (getcwd(cwd, sizeof(cwd)) != NULL)
+	       printf("	%s: %s\n", INDICATOR,cwd);
+}
+
+void changeDirectory(char **userInputTokenArray){
+	chdir("cd ../Downloads");
 }
 
 //MAIN LOOP
@@ -78,17 +101,19 @@ void userInputLoop(){
 		getline (&rawUserInput, &userInputLength, stdin);
 		lowercaseUserInput(rawUserInput,userInputLength);
 		parseUserInput(rawUserInput, userInputTokenArray);
-		getCommand(userInputTokenArray[0]);
+		getCommand(userInputTokenArray);
 		printOutMainArray(userInputTokenArray);
 
 	} while(1);	//loop runs as long as the first word isnt exit
-
+	free(userInputTokenArray);
+	free(rawUserInput);
+	free(exit);
 }
 
-void printOutMainArray(char **userInputArray){//BUG REMOVE THIS
+void printOutMainArray(char **userInputTokenArray){//BUG REMOVE THIS
 	int i;
-	for(i = 0; userInputArray[i] != NULL; i++)
-   printf("MAIN ARRAY: %s\n", userInputArray[i]);
+	for(i = 0; userInputTokenArray[i] != NULL; i++)
+   printf("MAIN ARRAY: %s\n", userInputTokenArray[i]);
 }
 
 int main(int argc, char *argv[])
