@@ -16,6 +16,7 @@ void lowercaseUserInput(char *rawUserInput, int userInputLength);
 void parseUserInput(char *rawUserInput,char **userInputArray);
 void listDirectories();
 void printCurrentWorkingDirectory();
+void date();
 void changeDirectory(char **userInputTokenArray, int maxToken);
 void getCommand(char **userInputTokenArray, int maxToken);
 char* commandGenerator(char **userInputTokenArray, int maxToken);
@@ -64,8 +65,6 @@ char* commandGenerator(char **userInputTokenArray, int maxToken){
 		strcat(result, userInputTokenArray[i]);
 	}
 
-	printf("%s: \n", result);
-
 	return result;
 }
 
@@ -84,6 +83,9 @@ void getCommand(char **userInputTokenArray, int maxToken){
 	}else if (strcmp(firstCommand, "ls") == 0)
 	{
 		  listDirectories(userInputTokenArray);
+	}else if (strcmp(firstCommand, "date") == 0)
+	{
+		  date();
 	}else if (strcmp(firstCommand, "pwd") == 0)
 	{
 		  printCurrentWorkingDirectory();
@@ -113,7 +115,18 @@ void listDirectories(char **userInputTokenArray){
 		execvp(argv[0],argv);
 	else
 		wait(0); //signatures: pid_t wait(int* exit_status)
+}
 
+void date(){
+	char *argv[2];
+		
+	argv[0] = "date";
+	argv[1] = NULL;
+
+	if(fork() == 0) //child
+		execlp("date","", NULL);//execvp(argv[0],argv);//system(date);
+	else
+		wait(0); //signatures: pid_t wait(int* exit_status)
 }
 
 //MAIN LOOP
