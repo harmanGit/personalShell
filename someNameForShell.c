@@ -15,11 +15,10 @@ void userInputLoop();
 void shellIndicator();
 void lowercaseUserInput(char *rawUserInput, int userInputLength);
 void parseUserInput(char *rawUserInput,char **userInputArray);
-void listDirectories();
 void printCurrentWorkingDirectory();
 void date();
 void hostname();
-void man(char **userInputTokenArray);
+void basicLinuxCommands(char **userInputTokenArray);
 void changeDirectory(char **userInputTokenArray, int maxToken);
 void getCommand(char **userInputTokenArray, int maxToken);
 char* commandGenerator(char **userInputTokenArray, int maxToken);
@@ -85,13 +84,22 @@ void getCommand(char **userInputTokenArray, int maxToken){
           	changeDirectory(userInputTokenArray, maxToken);
 	}else if (strcmp(firstCommand, "ls") == 0)
 	{
-		  listDirectories(userInputTokenArray);
+		  basicLinuxCommands(userInputTokenArray);
 	}else if (strcmp(firstCommand, "pwd") == 0)
 	{
 		  printCurrentWorkingDirectory();
 	}else if (strcmp(firstCommand, "man") == 0)
 	{
-		  man(userInputTokenArray);
+		  basicLinuxCommands(userInputTokenArray);
+	}else if (strcmp(firstCommand, "touch") == 0)
+	{
+		  basicLinuxCommands(userInputTokenArray);
+	}else if (strcmp(firstCommand, "mkdir") == 0)
+	{
+		  basicLinuxCommands(userInputTokenArray);
+	}else if (strcmp(firstCommand, "rm") == 0)
+	{
+		  basicLinuxCommands(userInputTokenArray);
 	}else if (strcmp(firstCommand, "date") == 0)
 	{
 		  date();
@@ -113,19 +121,6 @@ void changeDirectory(char **userInputTokenArray, int maxToken){
 		printf("ERROR: CD FAILED!\n");
 }
 
-void listDirectories(char **userInputTokenArray){
-	char *argv[3];
-		
-	argv[0] = userInputTokenArray[0];
-	argv[1] = userInputTokenArray[1];
-	argv[2] = userInputTokenArray[2];
-
-	if(fork() == 0) //child
-		execvp(argv[0],argv);
-	else
-		wait(0); //signatures: pid_t wait(int* exit_status)
-}
-
 void date(){
 	if(fork() == 0) //child
 		execlp("date","", NULL);
@@ -140,7 +135,7 @@ void hostname(){
 	printf("%s\n",hostname);
 }
 
-void man(char **userInputTokenArray){
+void basicLinuxCommands(char **userInputTokenArray){
 	char *argv[3];
 		
 	argv[0] = userInputTokenArray[0];
@@ -150,7 +145,7 @@ void man(char **userInputTokenArray){
 	if(fork() == 0) //child
 		execvp(argv[0],argv);
 	else
-		wait(0); //signatures: pid_t wait(int* exit_status)
+		wait(0);
 }
 
 
