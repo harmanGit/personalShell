@@ -18,6 +18,8 @@ void parseUserInput(char *rawUserInput,char **userInputArray);
 void listDirectories();
 void printCurrentWorkingDirectory();
 void date();
+void hostname();
+void man(char **userInputTokenArray);
 void changeDirectory(char **userInputTokenArray, int maxToken);
 void getCommand(char **userInputTokenArray, int maxToken);
 char* commandGenerator(char **userInputTokenArray, int maxToken);
@@ -84,12 +86,18 @@ void getCommand(char **userInputTokenArray, int maxToken){
 	}else if (strcmp(firstCommand, "ls") == 0)
 	{
 		  listDirectories(userInputTokenArray);
-	}else if (strcmp(firstCommand, "date") == 0)
-	{
-		  date();
 	}else if (strcmp(firstCommand, "pwd") == 0)
 	{
 		  printCurrentWorkingDirectory();
+	}else if (strcmp(firstCommand, "man") == 0)
+	{
+		  man(userInputTokenArray);
+	}else if (strcmp(firstCommand, "date") == 0)
+	{
+		  date();
+	}else if (strcmp(firstCommand, "hostname") == 0)
+	{
+		  hostname();
 	}else
 		printf("Invalid Input\n");
 }
@@ -125,21 +133,26 @@ void date(){
 		wait(0); //signatures: pid_t wait(int* exit_status)
 }
 
-void writingToFile(){//BUG
-
-	if(fork() == 0){ //child
-		  // duplicate the file descriptor for stdout
-  		  int saved_stdout = dup(1);
-
-		  int file_id = open("output.dat", O_CREAT | O_WRONLY, 0666);
-		  close(1); // close std output  stream
-		  dup(file_id); // duplicate file descriptor in slot 1
-		  execlp("date","", NULL);
-		  close(file_id);   
-	}else
-		wait(0); //signatures: pid_t wait(int* exit_status)
-
+void hostname(){
+	char hostname[1024];
+	hostname[1023] = '\0';
+	gethostname(hostname, 1023);
+	printf("%s\n",hostname);
 }
+
+void man(char **userInputTokenArray){
+	char *argv[3];
+		
+	argv[0] = userInputTokenArray[0];
+	argv[1] = userInputTokenArray[1];
+	argv[2] = userInputTokenArray[2];
+
+	if(fork() == 0) //child
+		execvp(argv[0],argv);
+	else
+		wait(0); //signatures: pid_t wait(int* exit_status)
+}
+
 
 //MAIN LOOP
 void userInputLoop(){
@@ -168,6 +181,22 @@ void printOutMainArray(char **userInputTokenArray){//BUG REMOVE THIS
 	int i;
 	for(i = 0; userInputTokenArray[i] != NULL; i++)
   		printf("MAIN ARRAY: %s\n", userInputTokenArray[i]);
+}
+
+void writingToFile(){//BUG
+
+	if(fork() == 0){ //child
+		  // duplicate the file descriptor for stdout
+  		  int saved_stdout = dup(1);
+
+		  int file_id = open("output.dat", O_CREAT | O_WRONLY, 0666);
+		  close(1); // close std output  stream
+		  dup(file_id); // duplicate file descriptor in slot 1
+		  execlp("date","", NULL);
+		  close(file_id);   
+	}else
+		wait(0); //signatures: pid_t wait(int* exit_status)
+
 }
 
 int main(int argc, char *argv[])
