@@ -3,9 +3,10 @@
 #include <sys/types.h> // pid_t
 #include <sys/wait.h> //wait
 #include <unistd.h> //fork, execlp, pipe
-#include<string.h>
+#include <string.h>
 #include <ctype.h>
 #include <limits.h>
+#include <fcntl.h>
 
 #define INDICATOR "~~>"
 #define SHELLNAME "someNameForShell"
@@ -21,6 +22,7 @@ void changeDirectory(char **userInputTokenArray, int maxToken);
 void getCommand(char **userInputTokenArray, int maxToken);
 char* commandGenerator(char **userInputTokenArray, int maxToken);
 void printOutMainArray(char **userInputArray);//BUG REMOVE THIS
+void writingToFile();//BUG
 
 
 void shellIndicator(){
@@ -78,7 +80,6 @@ void getCommand(char **userInputTokenArray, int maxToken){
 	}
 	else if (strcmp(firstCommand, "cd") == 0)
 	{
-	  	printf("CD pressed!\n");
           	changeDirectory(userInputTokenArray, maxToken);
 	}else if (strcmp(firstCommand, "ls") == 0)
 	{
@@ -118,15 +119,26 @@ void listDirectories(char **userInputTokenArray){
 }
 
 void date(){
-	char *argv[2];
-		
-	argv[0] = "date";
-	argv[1] = NULL;
-
 	if(fork() == 0) //child
-		execlp("date","", NULL);//execvp(argv[0],argv);//system(date);
+		execlp("date","", NULL);
 	else
 		wait(0); //signatures: pid_t wait(int* exit_status)
+}
+
+void writingToFile(){//BUG
+
+	if(fork() == 0){ //child
+		  // duplicate the file descriptor for stdout
+  		  int saved_stdout = dup(1);
+
+		  int file_id = open("output.dat", O_CREAT | O_WRONLY, 0666);
+		  close(1); // close std output  stream
+		  dup(file_id); // duplicate file descriptor in slot 1
+		  execlp("date","", NULL);
+		  close(file_id);   
+	}else
+		wait(0); //signatures: pid_t wait(int* exit_status)
+
 }
 
 //MAIN LOOP
