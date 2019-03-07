@@ -22,6 +22,7 @@ void executeRedirect(int position, char **userInputTokenArray, char **argv);
 int commandEndPosition(char **userInputTokenArray, int maxToken,int position);
 void executeRedirectWrite(int position, char **userInputTokenArray, char **argv);
 void executeInBackground(char **userInputTokenArray, char **argv);
+void executeIndirect(int position, char **userInputTokenArray, char **argv);
 void executePipe(int position,int maxToken ,char **userInputTokenArray, char **argv);
 void changeDirectory(char **userInputTokenArray, int maxToken);
 void getCommand(char **userInputTokenArray, int maxToken);
@@ -97,7 +98,7 @@ void redirectCommand(int commandId, int position,int maxToken,char **userInputTo
 	switch (commandId)
 	{
 		case 38:
-  		executeInBackground(userInputTokenArray, argv);//bug
+  		executeInBackground(userInputTokenArray, argv);//BUG
   		break;
 		case 62:
   		executeRedirect(position,userInputTokenArray, argv);
@@ -106,10 +107,10 @@ void redirectCommand(int commandId, int position,int maxToken,char **userInputTo
   		executeRedirectWrite(position,userInputTokenArray, argv);
   		break;
 		case 60:
-  		printf("Attempting a <, feature does not exist.\n");//executeRedirect(position,userInputTokenArray, argv);
+  		executeIndirect(position,userInputTokenArray, argv);
   		break;
 		case 124:
-	  	executePipe(position,maxToken,userInputTokenArray, argv);
+	  	executePipe(position,maxToken,userInputTokenArray, argv);//BUG
 	  	break;
 		default :
 			break;
@@ -130,9 +131,9 @@ void changeDirectory(char **userInputTokenArray, int maxToken){
 void basicLinuxCommands(char **userInputTokenArray,int maxToken){
 	char *argv[maxToken];
 	int endOrRedirectPosition = commandEndPosition(userInputTokenArray, maxToken,0);
-	//printf("argv %s\n", userInputTokenArray[endOrRedirectPosition]);//DEBUGING
+	//printf("endOrRedirectPosition %d\n", endOrRedirectPosition);//DEBUGING
 	int commandId = checkRedirect(userInputTokenArray[endOrRedirectPosition]);
-  //printf("argv %d\n", commandId);//DEBUGING
+  //printf("firstCommand %d\n", commandId);//DEBUGING
 
 	int i;
 	for(i = 0; i < maxToken; i++)
@@ -164,48 +165,49 @@ void executeInBackground(char **userInputTokenArray, char **argv){
 }
 
 void executePipe(int position,int maxToken ,char **userInputTokenArray, char **argv){
+	  char *argv2[maxToken];
+	  position++;
+	 // printf("position %d\n", position);//DEBUGING
+		int endOrRedirectPosition = commandEndPosition(userInputTokenArray, maxToken,position) + position;
+	//	printf("endOrRedirectPosition2 %d\n", endOrRedirectPosition);//DEBUGING
+		int commandId = checkRedirect(userInputTokenArray[endOrRedirectPosition]);
+		//printf("command %d\n", commandId);//DEBUGING
 
-	char *argv2[maxToken];
-	int endOrRedirectPosition = commandEndPosition(userInputTokenArray, maxToken,position);
-	//printf("argv %d\n", position);//DEBUGING
-	int commandId = checkRedirect(userInputTokenArray[endOrRedirectPosition]);
-	//printf("argv %d\n", commandId);//DEBUGING
-	position++;
-	int i;
-	for(i = 0; i < maxToken; i++)
-	{
-		if(userInputTokenArray[i+ position] != NULL)
-			argv2[i] = userInputTokenArray[i + position];
-		else
-			argv2[i] = NULL;
-			//printf("argv %s\n", userInputTokenArray[i + position]);//DEBUGING
-	}
+		int i;
+		for(i = 0; i < maxToken; i++)
+		{
+			if(userInputTokenArray[i+ position] != NULL)
+				argv2[i] = userInputTokenArray[i + position];
+			else
+				argv2[i] = NULL;
+				//printf("argv %s\n", argv2[i]);//DEBUGING
+		}
 
-	/////////////printf(" %d\n", commandId);//DEBUGING
+		//printf(" %d\n", commandId);//DEBUGING
 
-	if(commandId != 0){
-		redirectCommand(commandId,endOrRedirectPosition,maxToken, userInputTokenArray, argv);
-		//////////////printf("argv %d\n", commandId);//DEBUGING
-		return;
-	}
+		if(commandId != 0){
+			redirectCommand(commandId,endOrRedirectPosition,maxToken, userInputTokenArray, argv2);
+			//////////////printf("argv %d\n", commandId);//DEBUGING
+			return;
+		}
 
-   int pipefd[2];
-   pipe(pipefd);
+	   int pipefd[2];
+	   pipe(pipefd);
 
-   if(fork() == 0){
-      close(pipefd[0]);//close the read end of the pipe
-      dup2(pipefd[1], 1);// connects write end of pipe to stdout
-      execvp(argv[0],argv);//[cat pipe.c] writes to pipe
-   } else if(fork() == 0){
-      close(pipefd[1]); //close write end of pipe
-      dup2(pipefd[0], 0);// connects write end of pipe to stdout
-      execvp(argv2[0],argv2);//[grep ^#] reads from pipe
-   }
+	   if(fork() == 0){
+	      close(pipefd[0]);//close the read end of the pipe
+	      dup2(pipefd[1], 1);// connects write end of pipe to stdout
+	      execvp(argv[0],argv);//[cat pipe.c] writes to pipe
+	   } else if(fork() == 0){
+	      close(pipefd[1]); //close write end of pipe
+	      dup2(pipefd[0], 0);// connects write end of pipe to stdout
+	      execvp(argv2[0],argv2);//[grep ^#] reads from pipe
+	   }
 
-   close(pipefd[0]);
-   close(pipefd[1]);
-   wait(NULL);
-   wait(NULL);
+	   close(pipefd[0]);
+	   close(pipefd[1]);
+	   wait(NULL);
+	   wait(NULL);
 }
 
 void executeRedirectWrite(int position, char **userInputTokenArray, char **argv){
@@ -244,6 +246,26 @@ void executeRedirect(int position, char **userInputTokenArray, char **argv){
 		// Redirect output back to stdout
 		fflush(stdout);
 		dup2(saved_stdout, 1);
+}
+
+void executeIndirect(int position, char **userInputTokenArray, char **argv){
+	int saved_stdout = dup(0);
+
+	int file_id = open(userInputTokenArray[position + 1],O_RDONLY);
+	close(0); // close std output  stream
+	dup(file_id); // duplicate file descriptor in slot 1
+	if(fork() == 0){//child
+		execvp(argv[0],argv);
+		exit(0);
+	}
+	else
+		wait(0);
+	close(file_id);
+
+	// Redirect output back to stdout
+	//fflush(stdout);
+	dup2(saved_stdout, 0);
+
 }
 
 //MAIN LOOP
