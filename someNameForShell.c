@@ -84,7 +84,10 @@ void getCommand(char **userInputTokenArray, int maxToken){
 }
 
 int checkRedirect(char *command){
-	if(strcmp(command, "&") == 0){
+
+	if(command == NULL){
+		return 0;
+	}if(strcmp(command, "&") == 0){
 		return 38;
 	}if(strcmp(command, ">") == 0){
 		return 62;
@@ -136,6 +139,9 @@ void changeDirectory(char **userInputTokenArray, int maxToken){
 void basicLinuxCommands(char **userInputTokenArray,int maxToken){
 	char *argv[maxToken];
 	int endOrRedirectPosition = commandEndPosition(userInputTokenArray, maxToken,0);
+	//printf("argv %s\n", userInputTokenArray[endOrRedirectPosition]);//DEBUGING
+	int commandId = checkRedirect(userInputTokenArray[endOrRedirectPosition]);
+  //printf("argv %d\n", commandId);//DEBUGING
 
 	int i;
 	for(i = 0; i < maxToken; i++)
@@ -145,6 +151,11 @@ void basicLinuxCommands(char **userInputTokenArray,int maxToken){
 		else
 			argv[i] = NULL;
 			//printf("argv %s\n", argv[i]);//DEBUGING
+	}
+
+	if(commandId != 0){
+		redirectCommand(commandId,endOrRedirectPosition, userInputTokenArray, argv);
+		return;
 	}
 
 		if(fork() == 0){ //child
