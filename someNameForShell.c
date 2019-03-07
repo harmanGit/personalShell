@@ -157,11 +157,10 @@ void basicLinuxCommands(char **userInputTokenArray,int maxToken){
 }
 
 void executeInBackground(char **userInputTokenArray, char **argv){
-	printf("BUG: this is broken\n");
 	if(fork() == 0){ //child
 		execvp(argv[0],argv);
-	}else
-		wait(0);
+		exit(0);
+	}
 }
 
 void executePipe(int position,int maxToken ,char **userInputTokenArray, char **argv){
@@ -280,7 +279,7 @@ void writingToFile(){//BUG
 
 	if(fork() == 0){ //child
 		  // duplicate the file descriptor for stdout
-  		  int saved_stdout = dup(1);
+  		int saved_stdout = dup(1);
 
 		  int file_id = open("output.dat", O_CREAT | O_WRONLY, 0666);
 		  close(1); // close std output  stream
