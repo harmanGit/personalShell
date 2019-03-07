@@ -115,8 +115,6 @@ void basicLinuxCommands(char **userInputTokenArray){
 		argv[2] = userInputTokenArray[2];
 		
 	
-	printf("BUG: this is broken\n");
-	
 	if(fork() == 0){ //child
 		execvp(argv[0],argv);
 		exit(0);
@@ -177,6 +175,7 @@ void executePipe(int position, char **userInputTokenArray, char **argv){
 
    char *argv2[3];
 	argv2[0] = userInputTokenArray[position+ 1];
+	printf("");
 	argv2[1] = userInputTokenArray[position+ 2];
 	argv2[2] = userInputTokenArray[position+ 3];
 
@@ -197,7 +196,6 @@ void executePipe(int position, char **userInputTokenArray, char **argv){
    close(pipefd[1]);
    wait(NULL);
    wait(NULL);
-   printf("Main process done.\n");
 }
 
 void executeRedirectWrite(int position, char **userInputTokenArray, char **argv){
