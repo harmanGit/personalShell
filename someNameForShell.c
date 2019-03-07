@@ -16,9 +16,12 @@ void shellIndicator();
 void lowercaseUserInput(char *rawUserInput, int userInputLength);
 void parseUserInput(char *rawUserInput,char **userInputArray);
 void printCurrentWorkingDirectory();
-void date();
-void hostname();
 void basicLinuxCommands(char **userInputTokenArray);
+int redirect(int position, char **userInputTokenArray, char **argv);
+void executeRedirect(int position, char **userInputTokenArray,char **argv);
+void executeRedirectWrite(int position, char **userInputTokenArray, char **argv);
+void executeInBackground(char **userInputTokenArray, char **argv);
+void executePipe(int position, char **userInputTokenArray, char **argv);
 void changeDirectory(char **userInputTokenArray, int maxToken);
 void getCommand(char **userInputTokenArray, int maxToken);
 char* commandGenerator(char **userInputTokenArray, int maxToken);
@@ -80,34 +83,10 @@ void getCommand(char **userInputTokenArray, int maxToken){
 		exit(0);
 	}
 	else if (strcmp(firstCommand, "cd") == 0)
-	{
           	changeDirectory(userInputTokenArray, maxToken);
-	}else if (strcmp(firstCommand, "ls") == 0)
-	{
+	else
 		  basicLinuxCommands(userInputTokenArray);
-	}else if (strcmp(firstCommand, "pwd") == 0)
-	{
-		  printCurrentWorkingDirectory();
-	}else if (strcmp(firstCommand, "man") == 0)
-	{
-		  basicLinuxCommands(userInputTokenArray);
-	}else if (strcmp(firstCommand, "touch") == 0)
-	{
-		  basicLinuxCommands(userInputTokenArray);
-	}else if (strcmp(firstCommand, "mkdir") == 0)
-	{
-		  basicLinuxCommands(userInputTokenArray);
-	}else if (strcmp(firstCommand, "rm") == 0)
-	{
-		  basicLinuxCommands(userInputTokenArray);
-	}else if (strcmp(firstCommand, "date") == 0)
-	{
-		  date();
-	}else if (strcmp(firstCommand, "hostname") == 0)
-	{
-		  hostname();
-	}else
-		printf("Invalid Input\n");
+	
 }
 
 void printCurrentWorkingDirectory(){
@@ -117,37 +96,145 @@ void printCurrentWorkingDirectory(){
 }
 
 void changeDirectory(char **userInputTokenArray, int maxToken){
-	if(chdir(commandGenerator(userInputTokenArray, maxToken)) != 0)
-		printf("ERROR: CD FAILED!\n");
-}
-
-void date(){
-	if(fork() == 0) //child
-		execlp("date","", NULL);
-	else
-		wait(0); //signatures: pid_t wait(int* exit_status)
-}
-
-void hostname(){
-	char hostname[1024];
-	hostname[1023] = '\0';
-	gethostname(hostname, 1023);
-	printf("%s\n",hostname);
+	chdir(commandGenerator(userInputTokenArray, maxToken));
 }
 
 void basicLinuxCommands(char **userInputTokenArray){
 	char *argv[3];
-		
+	
 	argv[0] = userInputTokenArray[0];
-	argv[1] = userInputTokenArray[1];
-	argv[2] = userInputTokenArray[2];
+	
+	if(userInputTokenArray[1] != NULL && redirect(1,userInputTokenArray,argv) == 0)
+		return;
+	else
+		argv[1] = userInputTokenArray[1];
+	
+	if(userInputTokenArray[2] != NULL && redirect(2,userInputTokenArray,argv) == 0)
+		return;
+	else
+		argv[2] = userInputTokenArray[2];
+		
+	
+	printf("BUG: this is broken\n");
+	
+	if(fork() == 0){ //child
+		execvp(argv[0],argv);
+		exit(0);
+	}else
+		wait(0);
+		
+	
+	
+	//if(userInputTokenArray[1] != NULL && userInputTokenArray[2] == NULL){
+	//	redirect(1,userInputTokenArray,argv);
+	//	return;
+	//}else
+	//	argv[1] = userInputTokenArray[1];
+	//
+	//if(userInputTokenArray[2] != NULL){
+	//	redirect(2,userInputTokenArray,argv);
+	//	printf("argv %s.\n",argv[2] );
+	//	return;
+	//}else
+	//	argv[2] = userInputTokenArray[2];
+	//
+	//if(fork() == 0){ //child
+	//	execvp(argv[0],argv);
+	//	exit(0);
+	//}else
+	//	wait(0);
+}
 
+int redirect(int position, char **userInputTokenArray, char **argv){
+	if(strcmp(userInputTokenArray[position], "&") == 0){
+		executeInBackground(userInputTokenArray, argv);//bug
+		return 0;
+	}if(strcmp(userInputTokenArray[position], ">") == 0){
+		executeRedirect(position,userInputTokenArray, argv);
+		return 0;
+	}if(strcmp(userInputTokenArray[position], ">>") == 0){
+		executeRedirectWrite(position,userInputTokenArray, argv);
+		return 0;
+	}if(strcmp(userInputTokenArray[position], "<") == 0){
+		printf("Attempting a <, feature does not exist.\n");//executeRedirect(position,userInputTokenArray, argv);
+		return 0;
+	}if(strcmp(userInputTokenArray[position], "|") == 0){
+		executePipe(position,userInputTokenArray, argv);
+		return 0;
+	}
+	return 1;
+	
+}
+void executeInBackground(char **userInputTokenArray, char **argv){
+	printf("BUG: this is broken\n");
+	if(fork() == 0){ //child
+		execvp(argv[0],argv);
+	}else
+		wait(0);
+}
+
+void executePipe(int position, char **userInputTokenArray, char **argv){
+
+   char *argv2[3];
+	argv2[0] = userInputTokenArray[position+ 1];
+	argv2[1] = userInputTokenArray[position+ 2];
+	argv2[2] = userInputTokenArray[position+ 3];
+
+   int pipefd[2];
+   pipe(pipefd);
+
+   if(fork() == 0){
+      close(pipefd[0]);//close the read end of the pipe
+      dup2(pipefd[1], 1);// connects write end of pipe to stdout
+      execvp(argv[0],argv);//[cat pipe.c] writes to pipe
+   } else if(fork() == 0){
+      close(pipefd[1]); //close write end of pipe
+      dup2(pipefd[0], 0);// connects write end of pipe to stdout
+      execvp(argv2[0],argv2);//[grep ^#] reads from pipe
+   }
+
+   close(pipefd[0]);
+   close(pipefd[1]);
+   wait(NULL);
+   wait(NULL);
+   printf("Main process done.\n");
+}
+
+void executeRedirectWrite(int position, char **userInputTokenArray, char **argv){
+	
+	//int saved_stdout = dup(1);
+
+	//FILE *file_id = fopen("hello.txt", "w");
+	//close(1); // close std output  stream
+	//dup(file_id); // duplicate file descriptor in slot 1
+	//if(fork() == 0) //child
+	//	execvp(argv[0],argv);
+	//else
+	//	wait(0);
+	//fclose(file_id);
+
+	// Redirect output back to stdout
+	//fflush(stdout);
+	//dup2(saved_stdout, 1);
+		
+}
+
+void executeRedirect(int position, char **userInputTokenArray, char **argv){
+	int saved_stdout = dup(1);
+
+	int file_id = open(userInputTokenArray[position+1], O_CREAT | O_WRONLY, 0666);
+	close(1); // close std output  stream
+	dup(file_id); // duplicate file descriptor in slot 1
 	if(fork() == 0) //child
 		execvp(argv[0],argv);
 	else
 		wait(0);
-}
+	close(file_id);
 
+	// Redirect output back to stdout
+	fflush(stdout);
+	dup2(saved_stdout, 1);
+}
 
 //MAIN LOOP
 void userInputLoop(){
@@ -197,5 +284,5 @@ void writingToFile(){//BUG
 int main(int argc, char *argv[])
 {
 	userInputLoop();
-  return 0;
+	return 0;
 }
