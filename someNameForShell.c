@@ -15,16 +15,17 @@ void userInputLoop();
 void shellIndicator();
 void lowercaseUserInput(char *rawUserInput, int userInputLength);
 void parseUserInput(char *rawUserInput,char **userInputArray);
-void printCurrentWorkingDirectory();
-void basicLinuxCommands(char **userInputTokenArray);
+void basicLinuxCommands(char **userInputTokenArray, int maxToken);
 int redirect(int position, char **userInputTokenArray, char **argv);
-void executeRedirect(int position, char **userInputTokenArray,char **argv);
+int checkRedirect(char *command);
+void redirectCommand(int commandId, int position, char **userInputTokenArray , char **argv);
+void executeRedirect(int position, char **userInputTokenArray, char **argv);
+int commandEndPosition(char **userInputTokenArray, int maxToken,int position);
 void executeRedirectWrite(int position, char **userInputTokenArray, char **argv);
 void executeInBackground(char **userInputTokenArray, char **argv);
 void executePipe(int position, char **userInputTokenArray, char **argv);
 void changeDirectory(char **userInputTokenArray, int maxToken);
 void getCommand(char **userInputTokenArray, int maxToken);
-char* commandGenerator(char **userInputTokenArray, int maxToken);
 void printOutMainArray(char **userInputArray);//BUG REMOVE THIS
 void writingToFile();//BUG
 
@@ -43,11 +44,8 @@ void lowercaseUserInput(char *rawUserInput, int userInputLength){
 }
 
 void parseUserInput(char *rawUserInput,char **userInputArray){
-	
-	
 	if(strlen(rawUserInput) > 1)
-	rawUserInput[strlen(rawUserInput) - 1] = '\0'; //removing newline
-	
+		rawUserInput[strlen(rawUserInput) - 1] = '\0'; //removing newline
 
 	int i = 0;
 	char *temp = strtok (rawUserInput, " ");
@@ -60,18 +58,14 @@ void parseUserInput(char *rawUserInput,char **userInputArray){
 }
 
 //SHELL FUNCTIONS
-char* commandGenerator(char **userInputTokenArray, int maxToken){
-	char *result = malloc(maxToken);
-	int i = 0;
-	for(i = 1; userInputTokenArray[i] != NULL && 
-		   strcmp(userInputTokenArray[i], "|") != 0; i++){
-		if(i >1)
-		 strcat(result, " ");
-		
-		strcat(result, userInputTokenArray[i]);
-	}
+int commandEndPosition(char **userInputTokenArray, int maxToken, int position){
+	int commandEnd = 0;
+	int i;
+	for(i = position; userInputTokenArray[i] != NULL &&
+		   checkRedirect(userInputTokenArray[i]) == 0; i++)
+				 commandEnd++;
 
-	return result;
+	return commandEnd;
 }
 
 void getCommand(char **userInputTokenArray, int maxToken){
@@ -85,44 +79,104 @@ void getCommand(char **userInputTokenArray, int maxToken){
 	else if (strcmp(firstCommand, "cd") == 0)
           	changeDirectory(userInputTokenArray, maxToken);
 	else
-		  basicLinuxCommands(userInputTokenArray);
-	
+		  basicLinuxCommands(userInputTokenArray, maxToken);
+
 }
 
-void printCurrentWorkingDirectory(){
-	char cwd[PATH_MAX];
-   	if (getcwd(cwd, sizeof(cwd)) != NULL)
-	       printf("%s: %s\n", INDICATOR,cwd);
+int checkRedirect(char *command){
+	if(strcmp(command, "&") == 0){
+		return 38;
+	}if(strcmp(command, ">") == 0){
+		return 62;
+	}if(strcmp(command, ">>") == 0){
+		return 6262;
+	}if(strcmp(command, "<") == 0){
+		return 60;
+	}if(strcmp(command, "|") == 0){
+		return 124;
+	}
+	return 0;
+}
+
+void redirectCommand(int commandId, int position, char **userInputTokenArray , char **argv){
+	switch (commandId)
+	{
+		case 38:
+  		executeInBackground(userInputTokenArray, argv);//bug
+  		break;
+		case 62:
+  		executeRedirect(position,userInputTokenArray, argv);
+  		break;
+		case 6262:
+  		executeRedirectWrite(position,userInputTokenArray, argv);
+  		break;
+		case 60:
+  		printf("Attempting a <, feature does not exist.\n");//executeRedirect(position,userInputTokenArray, argv);
+  		break;
+		case 124:
+	  	executePipe(position,userInputTokenArray, argv);
+	  	break;
+		default :
+			break;
+	}
 }
 
 void changeDirectory(char **userInputTokenArray, int maxToken){
-	chdir(commandGenerator(userInputTokenArray, maxToken));
+	char *result = malloc(maxToken);
+	int i = 0;
+	for(i = 1; userInputTokenArray[i] != NULL &&
+		   checkRedirect(userInputTokenArray[i]) != 0; i++){
+		if(i >1)
+		 strcat(result, " ");
+		strcat(result, userInputTokenArray[i]);
+	}
+	chdir(result);
 }
 
-void basicLinuxCommands(char **userInputTokenArray){
-	char *argv[3];
-	
-	argv[0] = userInputTokenArray[0];
-	
-	if(userInputTokenArray[1] != NULL && redirect(1,userInputTokenArray,argv) == 0)
-		return;
-	else
-		argv[1] = userInputTokenArray[1];
-	
-	if(userInputTokenArray[2] != NULL && redirect(2,userInputTokenArray,argv) == 0)
-		return;
-	else
-		argv[2] = userInputTokenArray[2];
-		
-	
-	if(fork() == 0){ //child
-		execvp(argv[0],argv);
-		exit(0);
-	}else
-		wait(0);
-		
-	
-	
+void basicLinuxCommands(char **userInputTokenArray,int maxToken){
+	char *argv[maxToken];
+	int endOrRedirectPosition = commandEndPosition(userInputTokenArray, maxToken,0);
+
+	int i;
+	for(i = 0; i < maxToken; i++)
+	{
+		if(i < endOrRedirectPosition)
+			argv[i] = userInputTokenArray[i];
+		else
+			argv[i] = NULL;
+			//printf("argv %s\n", argv[i]);//DEBUGING
+	}
+
+		if(fork() == 0){ //child
+			execvp(argv[0],argv);
+			exit(0);
+		}else
+			wait(0);
+
+
+	//char *argv[3];
+
+	//argv[0] = userInputTokenArray[0];
+
+	//if(userInputTokenArray[1] != NULL && redirect(1,userInputTokenArray,argv) == 0)
+//		return;
+//	else
+//		argv[1] = userInputTokenArray[1];
+
+//	if(userInputTokenArray[2] != NULL && redirect(2,userInputTokenArray,argv) == 0)
+//		return;
+//	else
+//		argv[2] = userInputTokenArray[2];
+
+
+//	if(fork() == 0){ //child
+//		execvp(argv[0],argv);
+//		exit(0);
+//	}else
+//		wait(0);
+
+
+
 	//if(userInputTokenArray[1] != NULL && userInputTokenArray[2] == NULL){
 	//	redirect(1,userInputTokenArray,argv);
 	//	return;
@@ -143,26 +197,6 @@ void basicLinuxCommands(char **userInputTokenArray){
 	//	wait(0);
 }
 
-int redirect(int position, char **userInputTokenArray, char **argv){
-	if(strcmp(userInputTokenArray[position], "&") == 0){
-		executeInBackground(userInputTokenArray, argv);//bug
-		return 0;
-	}if(strcmp(userInputTokenArray[position], ">") == 0){
-		executeRedirect(position,userInputTokenArray, argv);
-		return 0;
-	}if(strcmp(userInputTokenArray[position], ">>") == 0){
-		executeRedirectWrite(position,userInputTokenArray, argv);
-		return 0;
-	}if(strcmp(userInputTokenArray[position], "<") == 0){
-		printf("Attempting a <, feature does not exist.\n");//executeRedirect(position,userInputTokenArray, argv);
-		return 0;
-	}if(strcmp(userInputTokenArray[position], "|") == 0){
-		executePipe(position,userInputTokenArray, argv);
-		return 0;
-	}
-	return 1;
-	
-}
 void executeInBackground(char **userInputTokenArray, char **argv){
 	printf("BUG: this is broken\n");
 	if(fork() == 0){ //child
@@ -199,32 +233,15 @@ void executePipe(int position, char **userInputTokenArray, char **argv){
 }
 
 void executeRedirectWrite(int position, char **userInputTokenArray, char **argv){
-	
-	//int saved_stdout = dup(1);
-
-	//FILE *file_id = fopen("hello.txt", "w");
-	//close(1); // close std output  stream
-	//dup(file_id); // duplicate file descriptor in slot 1
-	//if(fork() == 0) //child
-	//	execvp(argv[0],argv);
-	//else
-	//	wait(0);
-	//fclose(file_id);
-
-	// Redirect output back to stdout
-	//fflush(stdout);
-	//dup2(saved_stdout, 1);
-		
-}
-
-void executeRedirect(int position, char **userInputTokenArray, char **argv){
 	int saved_stdout = dup(1);
 
-	int file_id = open(userInputTokenArray[position+1], O_CREAT | O_WRONLY, 0666);
+	int file_id = open(userInputTokenArray[position + 1], O_APPEND | O_WRONLY, 0666);
 	close(1); // close std output  stream
 	dup(file_id); // duplicate file descriptor in slot 1
-	if(fork() == 0) //child
+	if(fork() == 0){//child
 		execvp(argv[0],argv);
+		exit(0);
+	}
 	else
 		wait(0);
 	close(file_id);
@@ -232,6 +249,25 @@ void executeRedirect(int position, char **userInputTokenArray, char **argv){
 	// Redirect output back to stdout
 	fflush(stdout);
 	dup2(saved_stdout, 1);
+}
+
+void executeRedirect(int position, char **userInputTokenArray, char **argv){
+		int saved_stdout = dup(1);
+
+		int file_id = open(userInputTokenArray[position + 1], O_CREAT | O_WRONLY, 0666);
+		close(1); // close std output  stream
+		dup(file_id); // duplicate file descriptor in slot 1
+		if(fork() == 0){//child
+			execvp(argv[0],argv);
+			exit(0);
+		}
+		else
+			wait(0);
+		close(file_id);
+
+		// Redirect output back to stdout
+		fflush(stdout);
+		dup2(saved_stdout, 1);
 }
 
 //MAIN LOOP
@@ -243,13 +279,14 @@ void userInputLoop(){
 	char *exit = "exit";
 
 	do {
-	  	shellIndicator();
+	  shellIndicator();
 		//setting everything in the array eqaul to null
 		memset(&userInputTokenArray[0],'\0',userInputLength);
 	 	getline (&rawUserInput, &userInputLength, stdin);
 		lowercaseUserInput(rawUserInput,userInputLength);
 		parseUserInput(rawUserInput, userInputTokenArray);
-		getCommand(userInputTokenArray, maxTokens);
+		getCommand(userInputTokenArray, 12);//12 is the maxToken BUG
+		//printOutMainArray(userInputTokenArray);//For DEBUGING
 
 	} while(1);//loop runs as long as its not exited
 	free(userInputTokenArray);
@@ -273,7 +310,7 @@ void writingToFile(){//BUG
 		  close(1); // close std output  stream
 		  dup(file_id); // duplicate file descriptor in slot 1
 		  execlp("date","", NULL);
-		  close(file_id);   
+		  close(file_id);
 	}else
 		wait(0); //signatures: pid_t wait(int* exit_status)
 
