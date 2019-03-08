@@ -299,14 +299,25 @@ void change_directory(char **parsed_user_input){
 	chdir(path);//execute change directory
 }
 
+/*
+* Method is used execute almost all linux commands, including the basics ones
+* the more complex ones like |, &, redirect, and indirect
+*
+* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
+* 														all parsed commands.
+*/
 void execute_linux_commands(char **parsed_user_input){
-	char *argv[MAX_TOKENS];
+	char *argv[MAX_TOKENS];//arguments to used in execvp
+
+	//command_ending_position() returns the position of where a single command
+	//ends, the 0 is passed as the parameter represents the starting position
 	int end_or_redirect_position = command_ending_position(parsed_user_input,0);
 	//printf("end_or_redirect_position %d\n", end_or_redirect_position);//DEBUGING
+	//finding if the end position is a null or a special command
 	int command_id = check_redirect(parsed_user_input[end_or_redirect_position]);
   //printf("first_command %d\n", command_id);//DEBUGING
 
-	int i;
+	int i;//creating a argv array(array of commands), to be used in execvp
 	for(i = 0; i < MAX_TOKENS; i++)
 	{
 		if(i < end_or_redirect_position)
@@ -315,38 +326,61 @@ void execute_linux_commands(char **parsed_user_input){
 			argv[i] = NULL;
 			//printf("argv %s\n", argv[i]);//DEBUGING
 	}
-
+	// if the command is special, then finding method and executing it accordingly
 	if(command_id != 0){
 		redirect_command(command_id,end_or_redirect_position, parsed_user_input, argv);
 		return;
 	}
-
+		//Forking to execute shell command
 		if(fork() == 0){ //child
-			execvp(argv[0],argv);
+			execvp(argv[0],argv);//executing the argument itself
 			exit(0);
 		}else
-			wait(0);
+			wait(0);//waiting for the child to finish executing
 }
 
+/*
+* Method is used execute a command in the background, it can be triggered the &.
+*
+* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
+* 														all parsed commands.
+* @param argv: (Array of Strings)(pointer) representing all the arguments(commands)
+*              for	the execvp().
+*/
 void execute_in_background(char **parsed_user_input, char **argv){
+	//Forking to execute shell command
 	if(fork() == 0){ //child
-		execvp(argv[0],argv);
+		execvp(argv[0],argv);//executing the argument itself
 		//fflush(stdout);//DEBUGGING layout issue caused by this method
-		exit(0);
+		exit(0);//making sure no Zombies are created
 	}
+	//NOT waiting for the child to finish executing
 }
 
+/*
+* Method is used execute multiple commands("pipes"), can be triggered the |.
+*
+* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
+* 														all parsed commands.
+* @param argv: (Array of Strings)(pointer) representing all the arguments(commands)
+*              for	the execvp().
+* @param position: (int) start position in the parsed_user_input.
+*/
 void execute_pipe(int position ,char **parsed_user_input, char **argv){
-	  char *argv2[MAX_TOKENS];
-	  position++;
-	 // printf("position %d\n", position);//DEBUGING
+	  char *argv2[MAX_TOKENS];//arguments to used in execvp
+	  position++;//position is the command itself, so moving passed it
+	  // printf("position %d\n", position);//DEBUGING
+	  // command_ending_position() returns the position of where a single command
+	  // ends, the position parameter is added to the position returned by the
+	  // command_ending_position() to find out the new end of the command
 		int end_or_redirect_position = command_ending_position(parsed_user_input,
 			position) + position;
-	//	printf("end_or_redirect_position2 %d\n", end_or_redirect_position);//DEBUGING
+		//	printf("end_or_redirect_position2 %d\n", end_or_redirect_position);//DEBUGING
+		//finding if the end position is a null or a special command
 		int command_id = check_redirect(parsed_user_input[end_or_redirect_position]);
-		//printf("command %d\n", command_id);//DEBUGINGhow to use a \ in c
+		//printf("command %d\n", command_id);//DEBUGING
 
-		int i;
+		int i;//creating a argv array(array of commands), to be used in execvp
 		for(i = 0; i < MAX_TOKENS; i++)
 		{
 			if(parsed_user_input[i+ position] != NULL)
@@ -357,25 +391,26 @@ void execute_pipe(int position ,char **parsed_user_input, char **argv){
 		}
 
 		//printf(" %d\n", command_id);//DEBUGING
-
+	 // if the command is special, then finding method and executing it accordingly
 		if(command_id != 0){
 			redirect_command(command_id,end_or_redirect_position,
 				 parsed_user_input, argv2);
-			//////////////printf("argv %d\n", command_id);//DEBUGING
+			//printf("argv %d\n", command_id);//DEBUGING
 			return;
 		}
 
 	   int pipefd[2];
 	   pipe(pipefd);
 
-	   if(fork() == 0){
+	   if(fork() == 0){//child
 	      close(pipefd[0]);//close the read end of the pipe
 	      dup2(pipefd[1], 1);// connects write end of pipe to stdout
-	      execvp(argv[0],argv);//[cat pipe.c] writes to pipe
-	   } else if(fork() == 0){
+	      execvp(argv[0],argv);//the first half of the pipe, writes to pipe
+	   } else if(fork() == 0){//child
 	      close(pipefd[1]); //close write end of pipe
 	      dup2(pipefd[0], 0);// connects write end of pipe to stdout
-	      execvp(argv2[0],argv2);//[grep ^#] reads from pipe
+				//executing the second half of the pipe,reads from pipe
+	      execvp(argv2[0],argv2);
 	   }
 
 	   close(pipefd[0]);
@@ -384,6 +419,16 @@ void execute_pipe(int position ,char **parsed_user_input, char **argv){
 	   wait(NULL);
 }
 
+/*
+* Method is used redirect the output of a command to a file which is created
+* with the name thats is user defined. It can be triggered the >.
+*
+* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
+* 														all parsed commands.
+* @param argv: (Array of Strings)(pointer) representing all the arguments(commands)
+*              for	the execvp().
+* @param position: (int) start position in the parsed_user_input.
+*/
 void execute_redirect_write(int position, char **parsed_user_input,
 	 char **argv){
 	int saved_stdout = dup(1);
@@ -391,12 +436,13 @@ void execute_redirect_write(int position, char **parsed_user_input,
 	int file_id = open(parsed_user_input[position + 1], O_APPEND | O_WRONLY, 0666);
 	close(1); // close std output  stream
 	dup(file_id); // duplicate file descriptor in slot 1
+	//Forking to execute shell command
 	if(fork() == 0){//child
-		execvp(argv[0],argv);
-		exit(0);
+		execvp(argv[0],argv);//executing the argument itself
+		exit(0);//making sure no Zombies are created
 	}
 	else
-		wait(0);
+		wait(0);//waiting for the child to finish executing
 	close(file_id);
 
 	// Redirect output back to stdout
@@ -404,19 +450,32 @@ void execute_redirect_write(int position, char **parsed_user_input,
 	dup2(saved_stdout, 1);
 }
 
+/*
+* Method is used redirect the output of a command to a file, where the commands
+* output is appends to the file name thats user defined.
+*  It can be triggered the >>.
+*
+* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
+* 														all parsed commands.
+* @param argv: (Array of Strings)(pointer) representing all the arguments(commands)
+*              for	the execvp().
+* @param position: (int) start position in the parsed_user_input.
+*/
 void execute_redirect_create(int position, char **parsed_user_input,
 	 char **argv){
+		//Output from terminal is redirect to a file.
 		int saved_stdout = dup(1);
 
 		int file_id = open(parsed_user_input[position + 1], O_CREAT | O_WRONLY, 0666);
 		close(1); // close std output  stream
 		dup(file_id); // duplicate file descriptor in slot 1
+		//Forking to execute shell command
 		if(fork() == 0){//child
-			execvp(argv[0],argv);
-			exit(0);
+			execvp(argv[0],argv);//executing the argument itself
+			exit(0);//making sure no Zombies are created
 		}
 		else
-			wait(0);
+			wait(0);//waiting for the child to finish executing
 		close(file_id);
 
 		// Redirect output back to stdout
@@ -425,23 +484,24 @@ void execute_redirect_create(int position, char **parsed_user_input,
 }
 
 void execute_indirect(int position, char **parsed_user_input, char **argv){
+	//Contents of a file are being redirected to the terminal
 	int saved_stdout = dup(0);
 
 	int file_id = open(parsed_user_input[position + 1],O_RDONLY);
 	close(0); // close std output  stream
 	dup(file_id); // duplicate file descriptor in slot 1
+	//Forking to execute shell command
 	if(fork() == 0){//child
-		execvp(argv[0],argv);
-		exit(0);
+		execvp(argv[0],argv);//executing the argument itself
+		exit(0);//making sure no Zombies are created
 	}
 	else
-		wait(0);
+		wait(0);//waiting for the child to finish executing
 	close(file_id);
 
-	// Redirect output back to stdout
+	// Redirect output back to file
 	//fflush(stdout);
 	dup2(saved_stdout, 0);
-
 }
 
 //--------------------------------CORE LOOPS------------------------------------
