@@ -11,30 +11,31 @@
 #define INDICATOR "~~>"
 #define SHELLNAME "woof"
 
-void userInputLoop();
-void shellIndicator();
-void parseUserInput(char *rawUserInput,char **userInputArray);
-void basicLinuxCommands(char **userInputTokenArray, int maxToken);
-int redirect(int position, char **userInputTokenArray, char **argv);
-int checkRedirect(char *command);
-void redirectCommand(int commandId, int position,int maxToken,char **userInputTokenArray , char **argv);
-void executeRedirect(int position, char **userInputTokenArray, char **argv);
-int commandEndPosition(char **userInputTokenArray, int maxToken,int position);
-void executeRedirectWrite(int position, char **userInputTokenArray, char **argv);
-void executeInBackground(char **userInputTokenArray, char **argv);
-void executeIndirect(int position, char **userInputTokenArray, char **argv);
-void executePipe(int position,int maxToken ,char **userInputTokenArray, char **argv);
-void changeDirectory(char **userInputTokenArray, int maxToken);
-void getCommand(char **userInputTokenArray, int maxToken);
-void printOutMainArray(char **userInputArray);//BUG REMOVE THIS
+void user_input_loop();
+void shell_indicator();
+void display_ascii_art();
+void parse_user_input(char *raw_user_input,char **temp_user_input);
+int command_ending_position(char **parsed_user_input, int maxToken,int position);
+void execute_command(char **parsed_user_input, int maxToken);
+int check_redirect(char *command);
+void redirect_command(int commandId, int position,int maxToken,char **parsed_user_input , char **argv);
+void change_directory(char **parsed_user_input, int maxToken);
+void execute_linux_commands(char **parsed_user_input, int maxToken);
+void execute_in_background(char **parsed_user_input, char **argv);
+void execute_pipe(int position,int maxToken ,char **parsed_user_input, char **argv);
+void execute_redirect_write(int position, char **parsed_user_input, char **argv);
+void execute_redirect_create(int position, char **parsed_user_input, char **argv);
+void execute_indirect(int position, char **parsed_user_input, char **argv);
+
+void printOutMainArray(char **temp_user_input);//BUG REMOVE THIS
 void writingToFile();//BUG
 
 
-void shellIndicator(){
+void shell_indicator(){
 	printf ("%s %s", SHELLNAME, INDICATOR);
 }
 
-void displayASCIIArt(){
+void display_ascii_art(){
 printf("                                        :NOX \n");
 printf("                                       ,NOM@: \n");
 printf("                                       :NNNN: \n");
@@ -92,33 +93,33 @@ printf("                               .. \n");
 }
 
 //USERINPUT
-void parseUserInput(char *rawUserInput,char **userInputArray){
-	if(strlen(rawUserInput) > 1 && rawUserInput[0] != ' ')
-		rawUserInput[strlen(rawUserInput) - 1] = '\0'; //removing newline
+void parse_user_input(char *raw_user_input,char **temp_user_input){
+	if(strlen(raw_user_input) > 1 && raw_user_input[0] != ' ')
+		raw_user_input[strlen(raw_user_input) - 1] = '\0'; //removing newline
 
 	int i = 0;
-	char *temp = strtok (rawUserInput, " ");
+	char *temp = strtok (raw_user_input, " ");
 
 	while (temp != NULL)
 	{
-		userInputArray[i++] = temp;
+		temp_user_input[i++] = temp;
 		temp = strtok (NULL, " ");
 	}
 }
 
 //SHELL FUNCTIONS
-int commandEndPosition(char **userInputTokenArray, int maxToken, int position){
+int command_ending_position(char **parsed_user_input, int maxToken, int position){
 	int commandEnd = 0;
 	int i;
-	for(i = position; userInputTokenArray[i] != NULL &&
-		   checkRedirect(userInputTokenArray[i]) == 0; i++)
+	for(i = position; parsed_user_input[i] != NULL &&
+		   check_redirect(parsed_user_input[i]) == 0; i++)
 				 commandEnd++;
 
 	return commandEnd;
 }
 
-void getCommand(char **userInputTokenArray, int maxToken){
-	char *firstCommand = userInputTokenArray[0];
+void execute_command(char **parsed_user_input, int maxToken){
+	char *firstCommand = parsed_user_input[0];
 
 	if (strcmp(firstCommand, "exit") == 0)
 	{
@@ -126,13 +127,13 @@ void getCommand(char **userInputTokenArray, int maxToken){
 		exit(0);
 	}
 	else if (strcmp(firstCommand, "cd") == 0)
-          	changeDirectory(userInputTokenArray, maxToken);
+          	change_directory(parsed_user_input, maxToken);
 	else
-		  basicLinuxCommands(userInputTokenArray, maxToken);
+		  execute_linux_commands(parsed_user_input, maxToken);
 
 }
 
-int checkRedirect(char *command){
+int check_redirect(char *command){
 
 	if(command == NULL){
 		return 0;
@@ -150,59 +151,59 @@ int checkRedirect(char *command){
 	return 0;
 }
 
-void redirectCommand(int commandId, int position,int maxToken,char **userInputTokenArray , char **argv){
+void redirect_command(int commandId, int position,int maxToken,char **parsed_user_input , char **argv){
 	switch (commandId)
 	{
 		case 38:
-  		executeInBackground(userInputTokenArray, argv);//BUG
+  		execute_in_background(parsed_user_input, argv);//BUG
   		break;
 		case 62:
-  		executeRedirect(position,userInputTokenArray, argv);
+  		execute_redirect_create(position,parsed_user_input, argv);
   		break;
 		case 6262:
-  		executeRedirectWrite(position,userInputTokenArray, argv);
+  		execute_redirect_write(position,parsed_user_input, argv);
   		break;
 		case 60:
-  		executeIndirect(position,userInputTokenArray, argv);
+  		execute_indirect(position,parsed_user_input, argv);
   		break;
 		case 124:
-	  	executePipe(position,maxToken,userInputTokenArray, argv);//BUG
+	  	execute_pipe(position,maxToken,parsed_user_input, argv);//BUG
 	  	break;
 		default :
 			break;
 	}
 }
 
-void changeDirectory(char **userInputTokenArray, int maxToken){
+void change_directory(char **parsed_user_input, int maxToken){
 	char *result = malloc(maxToken);
 	int i = 0;
-	for(i = 1; userInputTokenArray[i] != NULL; i++){
+	for(i = 1; parsed_user_input[i] != NULL; i++){
 		if(i >1)
 		 strcat(result, " ");
-		strcat(result, userInputTokenArray[i]);
+		strcat(result, parsed_user_input[i]);
 	}
 	chdir(result);
 }
 
-void basicLinuxCommands(char **userInputTokenArray,int maxToken){
+void execute_linux_commands(char **parsed_user_input,int maxToken){
 	char *argv[maxToken];
-	int endOrRedirectPosition = commandEndPosition(userInputTokenArray, maxToken,0);
+	int endOrRedirectPosition = command_ending_position(parsed_user_input, maxToken,0);
 	//printf("endOrRedirectPosition %d\n", endOrRedirectPosition);//DEBUGING
-	int commandId = checkRedirect(userInputTokenArray[endOrRedirectPosition]);
+	int commandId = check_redirect(parsed_user_input[endOrRedirectPosition]);
   //printf("firstCommand %d\n", commandId);//DEBUGING
 
 	int i;
 	for(i = 0; i < maxToken; i++)
 	{
 		if(i < endOrRedirectPosition)
-			argv[i] = userInputTokenArray[i];
+			argv[i] = parsed_user_input[i];
 		else
 			argv[i] = NULL;
 			//printf("argv %s\n", argv[i]);//DEBUGING
 	}
 
 	if(commandId != 0){
-		redirectCommand(commandId,endOrRedirectPosition,maxToken, userInputTokenArray, argv);
+		redirect_command(commandId,endOrRedirectPosition,maxToken, parsed_user_input, argv);
 		return;
 	}
 
@@ -213,7 +214,7 @@ void basicLinuxCommands(char **userInputTokenArray,int maxToken){
 			wait(0);
 }
 
-void executeInBackground(char **userInputTokenArray, char **argv){
+void execute_in_background(char **parsed_user_input, char **argv){
 	if(fork() == 0){ //child
 		execvp(argv[0],argv);
 		//fflush(stdout);
@@ -221,20 +222,20 @@ void executeInBackground(char **userInputTokenArray, char **argv){
 	}
 }
 
-void executePipe(int position,int maxToken ,char **userInputTokenArray, char **argv){
+void execute_pipe(int position,int maxToken ,char **parsed_user_input, char **argv){
 	  char *argv2[maxToken];
 	  position++;
 	 // printf("position %d\n", position);//DEBUGING
-		int endOrRedirectPosition = commandEndPosition(userInputTokenArray, maxToken,position) + position;
+		int endOrRedirectPosition = command_ending_position(parsed_user_input, maxToken,position) + position;
 	//	printf("endOrRedirectPosition2 %d\n", endOrRedirectPosition);//DEBUGING
-		int commandId = checkRedirect(userInputTokenArray[endOrRedirectPosition]);
+		int commandId = check_redirect(parsed_user_input[endOrRedirectPosition]);
 		//printf("command %d\n", commandId);//DEBUGINGhow to use a \ in c
 
 		int i;
 		for(i = 0; i < maxToken; i++)
 		{
-			if(userInputTokenArray[i+ position] != NULL)
-				argv2[i] = userInputTokenArray[i + position];
+			if(parsed_user_input[i+ position] != NULL)
+				argv2[i] = parsed_user_input[i + position];
 			else
 				argv2[i] = NULL;
 				//printf("argv %s\n", argv2[i]);//DEBUGING
@@ -243,7 +244,7 @@ void executePipe(int position,int maxToken ,char **userInputTokenArray, char **a
 		//printf(" %d\n", commandId);//DEBUGING
 
 		if(commandId != 0){
-			redirectCommand(commandId,endOrRedirectPosition,maxToken, userInputTokenArray, argv2);
+			redirect_command(commandId,endOrRedirectPosition,maxToken, parsed_user_input, argv2);
 			//////////////printf("argv %d\n", commandId);//DEBUGING
 			return;
 		}
@@ -267,10 +268,10 @@ void executePipe(int position,int maxToken ,char **userInputTokenArray, char **a
 	   wait(NULL);
 }
 
-void executeRedirectWrite(int position, char **userInputTokenArray, char **argv){
+void execute_redirect_write(int position, char **parsed_user_input, char **argv){
 	int saved_stdout = dup(1);
 
-	int file_id = open(userInputTokenArray[position + 1], O_APPEND | O_WRONLY, 0666);
+	int file_id = open(parsed_user_input[position + 1], O_APPEND | O_WRONLY, 0666);
 	close(1); // close std output  stream
 	dup(file_id); // duplicate file descriptor in slot 1
 	if(fork() == 0){//child
@@ -286,10 +287,10 @@ void executeRedirectWrite(int position, char **userInputTokenArray, char **argv)
 	dup2(saved_stdout, 1);
 }
 
-void executeRedirect(int position, char **userInputTokenArray, char **argv){
+void execute_redirect_create(int position, char **parsed_user_input, char **argv){
 		int saved_stdout = dup(1);
 
-		int file_id = open(userInputTokenArray[position + 1], O_CREAT | O_WRONLY, 0666);
+		int file_id = open(parsed_user_input[position + 1], O_CREAT | O_WRONLY, 0666);
 		close(1); // close std output  stream
 		dup(file_id); // duplicate file descriptor in slot 1
 		if(fork() == 0){//child
@@ -305,10 +306,10 @@ void executeRedirect(int position, char **userInputTokenArray, char **argv){
 		dup2(saved_stdout, 1);
 }
 
-void executeIndirect(int position, char **userInputTokenArray, char **argv){
+void execute_indirect(int position, char **parsed_user_input, char **argv){
 	int saved_stdout = dup(0);
 
-	int file_id = open(userInputTokenArray[position + 1],O_RDONLY);
+	int file_id = open(parsed_user_input[position + 1],O_RDONLY);
 	close(0); // close std output  stream
 	dup(file_id); // duplicate file descriptor in slot 1
 	if(fork() == 0){//child
@@ -326,33 +327,33 @@ void executeIndirect(int position, char **userInputTokenArray, char **argv){
 }
 
 //MAIN LOOP
-void userInputLoop(){
+void user_input_loop(){
 	size_t userInputLength = 128;
 	int maxTokens = 12;
-	char *userInputTokenArray[maxTokens];
-	char *rawUserInput;
+	char *parsed_user_input[maxTokens];
+	char *raw_user_input;
 	char *exit = "exit";
 
 	do {
-	  shellIndicator();
+	  shell_indicator();
 		//setting everything in the array eqaul to null
-		memset(&userInputTokenArray[0],'\0',userInputLength);
-	 	getline (&rawUserInput, &userInputLength, stdin);
-		parseUserInput(rawUserInput, userInputTokenArray);
-		getCommand(userInputTokenArray, 12);//12 is the maxToken BUG
+		memset(&parsed_user_input[0],'\0',userInputLength);
+	 	getline (&raw_user_input, &userInputLength, stdin);
+		parse_user_input(raw_user_input, parsed_user_input);
+		execute_command(parsed_user_input, 12);//12 is the maxToken BUG
 		//fflush(stdout);
-		//printOutMainArray(userInputTokenArray);//For DEBUGING
+		//printOutMainArray(parsed_user_input);//For DEBUGING
 
 	} while(1);//loop runs as long as its not exited
-	free(userInputTokenArray);
-	free(rawUserInput);
+	free(parsed_user_input);
+	free(raw_user_input);
 	free(exit);
 }
 
-void printOutMainArray(char **userInputTokenArray){//BUG REMOVE THIS
+void printOutMainArray(char **parsed_user_input){//BUG REMOVE THIS
 	int i;
-	for(i = 0; userInputTokenArray[i] != NULL; i++)
-  		printf("MAIN ARRAY: %s\n", userInputTokenArray[i]);
+	for(i = 0; parsed_user_input[i] != NULL; i++)
+  		printf("MAIN ARRAY: %s\n", parsed_user_input[i]);
 }
 
 void writingToFile(){//BUG
@@ -373,7 +374,7 @@ void writingToFile(){//BUG
 
 int main(int argc, char *argv[])
 {
-	displayASCIIArt();
-	userInputLoop();
+	display_ascii_art();
+	user_input_loop();
 	return 0;
 }
