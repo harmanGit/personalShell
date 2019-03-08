@@ -2,37 +2,38 @@
  * Program Name: puppyShell
  * File Name: dhillonShell.c
  * Author: Harman Dhillon (2019)
- * Purpose: Basic Shell to run most linux bash shell commands
+ * Purpose: Basic Shell to run most linux bash shell commands.
  * Not Supported: Multiple Pipes
  * Bugs(known):
  *			1. Pipes with redirects don't execute properly, although the second
  *  			 part of the pipe does execute.I have attempted to debug
- *				 this issue and don't quite understand whats going one. I have left
- *				 all the code I used to step through the user input (used to is what
- *			   see what commands are going to be executed) commented out. I think
+ *				 this issue and don't quite understand whats going on. I have left
+ *				 all the code I used to step through the user input (used to see what
+ *			   commands are going to be executed, in which order) commented out.I think
  *				 the solution to this problem would be using dup and catching
  *				 the terminal output for the first half of the pipe. Then taking
  *				 that input and storing it, to use for the second half of the pipe.
  *				 Example Command: grep include shell.c | wc > c.txt
- *			2. When using the & and executing commands in the background, sometimes
- *				 the layout of the shell indicator gets messed up.It looks as through
- *				 a newline was entired automatically placed after shell indicator,
- *				 causing all other command to show up next to the shell indicator
- *				 and not the below it. The shell it self remains to work properly and
- *				 the & also works properly. This bug does not casue any other issues
- *				 other than the fact the visual layout is slightly messed up. I have
- *				 tried debugging this by using fflush and it made no different. I also
- *				 checked for random printf() with newlines.
+ *			2. When using the &" to execute commands in the background, sometimes
+ *				 the layout of the shell indicator gets messed up.It looks as though
+ *				 a newline was placed automatically after the shell indicator, causing
+ *				 all other command output to be displayed by the shell indicator
+ *				 and not below it. This bug causes no major issues to the shell.
+ *				 The shell itself remains to work properly and so does the &. This bug
+ *				 does not cause any other issues. Other than the fact the visual
+ *				 layout is slightly messed up. I have tried debugging this issue
+ *				 by using fflush and it made no difference. I also checked for random
+ *				 printf() with newlines.
  *				 Example Command: netbeans &
  *				 Steps To Replicate Error: Before entering the example command,execute
  *				 a simple commad like ls. Notice how the output of the ls command is
  *				 displayed below the shell indicator(woof~~>). Now execute the
- *				 example command. After the example command is execute close the
+ *				 example command. After the example command is executed, close the
  *				 application (netbeans). After that use the shell again with a simple
  *				 command like ls. Notice how the output of ls is now displayed next
  *				 to the shell indicator, instead of below it.
  *
- * To Do: Implement Multiple Pipes and febug layout issue after & and pipe redirect.
+ * To Do: Implement Multiple Pipes and debug layout issue after & and pipe redirect.
  */
 
 #include <stdio.h>
@@ -69,7 +70,7 @@ void print_out_main_array(char **temp_user_input);//USED FOR DEBUGGING
 
 /*
 * Main displays ASCII art at start up(only once at start up) and then continues
-* the main loop (user_input_loop) which then is responsible all the logic of
+* the main loop (user_input_loop) which then is responsible for all the logic of
 * the puppy shell.
 */
 int main(int argc, char *argv[])
@@ -146,6 +147,8 @@ printf("      `:P           :oP..  "".OOM@NXNM. \n");
 printf("       `.                    .:OXNP. \n");
 printf("                               .. \n");
 
+printf("The Puppy Shell, by Harman Dhillon 2019.\n");
+
 // Author -hrr-
 // http://ascii.co.uk/art/dog
 }
@@ -153,7 +156,7 @@ printf("                               .. \n");
 //--------------------------------USER INPUT------------------------------------
 /*
 * Method is used to parse and tokenize raw user input from the command line.
-* the raw user input is tokenized by the spaces between them.
+* The raw user input is tokenized by the spaces between them.
 *
 * @param raw_user_input: (Array of chars) (pointer) representing the raw user
 *									   			input from the terminal using getline.
@@ -178,17 +181,18 @@ void parse_user_input(char *raw_user_input,char **temp_user_input){
 
 //-----------------------------PARSING COMMANDS---------------------------------
 /*
-* Method is used find out where the a single linux command ends. A end is
+* Method is used to find out where a single linux command ends. A end is
 * determined by &, |, <, >, >>, and a null value.
 *
-* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
-* 													all parsed commands
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands
 * @param position: (int) start position in the parsed_user_input.
-* @return int: representing where a single command ends
+* @return int: represents where the single command ends
 */
 int command_ending_position(char **parsed_user_input, int position){
 	int command_end = 0;
 	int i;
+	//checking for special commands
 	for(i = position; parsed_user_input[i] != NULL &&
 		   check_redirect(parsed_user_input[i]) == 0; i++)
 				 command_end++;
@@ -201,8 +205,8 @@ int command_ending_position(char **parsed_user_input, int position){
 * rest of the commands are executed with execvp using the
 * execute_linux_commands method.
 *
-* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
-* 													all parsed commands.
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands
 */
 void execute_command(char **parsed_user_input){
 	char *first_command = parsed_user_input[0];//getting users first command
@@ -221,8 +225,9 @@ void execute_command(char **parsed_user_input){
 
 /*
 * Method is used check if the given command is special,also based of the given
-* command a unique value is returns(I call the command id.) Normal commands
-* return a zero.Special commands:  &, |, <, >, >>
+* command a unique value is returns(I call it the command id.) Normal commands
+* or nulls return a zero. Special commands( &, |, <, >, >>) return there ASCII
+* decimal value.
 *
 * @param command: (Array of Chars)(pointer) represents single command.
 * @return int: represents a special commands decimal value (command id),
@@ -250,8 +255,8 @@ int check_redirect(char *command){
 * Method is used execute special shell commands based of the command id recieved
 *
 * @param command_id: (int) special commands decimal value
-* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
-* 														all parsed commands.
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands
 * @param position: (int) start position in the parsed_user_input.
 */
 void redirect_command(int command_id, int position,char **parsed_user_input,
@@ -280,17 +285,17 @@ void redirect_command(int command_id, int position,char **parsed_user_input,
 
 //-----------------------------SHELL COMMANDS-----------------------------------
 /*
-* Method is used execute a built in change directory
+* Method is used execute the built in change directory.
 *
-* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
-* 														all parsed commands.
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands.
 */
 void change_directory(char **parsed_user_input){
 	char *path = malloc(MAX_TOKENS);//string represents the file path
 	int i = 0;
 	//Going through the array of commands and combining them together
-	// (seperated by spaces) to form a string. Therefore allowing directory names
-	// to be "asdf asdf asdf" can still work.
+	//(seperated by spaces) to form a string. Therefore allowing directory names
+	//to be "asdf asdf asdf" can still be executed.
 	for(i = 1; parsed_user_input[i] != NULL; i++){
 		if(i >1)
 		 strcat(path, " ");//adding spaces
@@ -301,16 +306,16 @@ void change_directory(char **parsed_user_input){
 
 /*
 * Method is used execute almost all linux commands, including the basics ones
-* the more complex ones like |, &, redirect, and indirect
+* the more complex ones like |, &, redirect, and indirect.
 *
-* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
-* 														all parsed commands.
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands.
 */
 void execute_linux_commands(char **parsed_user_input){
 	char *argv[MAX_TOKENS];//arguments to used in execvp
 
 	//command_ending_position() returns the position of where a single command
-	//ends, the 0 is passed as the parameter represents the starting position
+	//ends, the 0 is passed as the parameter represents the starting position 0
 	int end_or_redirect_position = command_ending_position(parsed_user_input,0);
 	//printf("end_or_redirect_position %d\n", end_or_redirect_position);//DEBUGING
 	//finding if the end position is a null or a special command
@@ -326,7 +331,7 @@ void execute_linux_commands(char **parsed_user_input){
 			argv[i] = NULL;
 			//printf("argv %s\n", argv[i]);//DEBUGING
 	}
-	// if the command is special, then finding method and executing it accordingly
+	//if the command is special, then finding method and executing it accordingly
 	if(command_id != 0){
 		redirect_command(command_id,end_or_redirect_position, parsed_user_input, argv);
 		return;
@@ -340,12 +345,12 @@ void execute_linux_commands(char **parsed_user_input){
 }
 
 /*
-* Method is used execute a command in the background, it can be triggered the &.
+* Method is used execute commands in the background, it can be triggered by the &.
 *
-* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
-* 														all parsed commands.
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands.
 * @param argv: (Array of Strings)(pointer) representing all the arguments(commands)
-*              for	the execvp().
+*              for the execvp().
 */
 void execute_in_background(char **parsed_user_input, char **argv){
 	//Forking to execute shell command
@@ -358,10 +363,10 @@ void execute_in_background(char **parsed_user_input, char **argv){
 }
 
 /*
-* Method is used execute multiple commands("pipes"), can be triggered the |.
+* Method is used execute multiple commands("pipes"), can be triggered by the |.
 *
-* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
-* 														all parsed commands.
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands.
 * @param argv: (Array of Strings)(pointer) representing all the arguments(commands)
 *              for	the execvp().
 * @param position: (int) start position in the parsed_user_input.
@@ -405,7 +410,7 @@ void execute_pipe(int position ,char **parsed_user_input, char **argv){
 	   if(fork() == 0){//child
 	      close(pipefd[0]);//close the read end of the pipe
 	      dup2(pipefd[1], 1);// connects write end of pipe to stdout
-	      execvp(argv[0],argv);//the first half of the pipe, writes to pipe
+	      execvp(argv[0],argv);//executes first half of the pipe, writes to pipe
 	   } else if(fork() == 0){//child
 	      close(pipefd[1]); //close write end of pipe
 	      dup2(pipefd[0], 0);// connects write end of pipe to stdout
@@ -420,11 +425,11 @@ void execute_pipe(int position ,char **parsed_user_input, char **argv){
 }
 
 /*
-* Method is used redirect the output of a command to a file which is created
-* with the name thats is user defined. It can be triggered the >.
+* Method is used to redirect the output of a command to a file, which is created
+* with the name that the user defines. It can be triggered by the >.
 *
-* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
-* 														all parsed commands.
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands.
 * @param argv: (Array of Strings)(pointer) representing all the arguments(commands)
 *              for	the execvp().
 * @param position: (int) start position in the parsed_user_input.
@@ -451,14 +456,14 @@ void execute_redirect_write(int position, char **parsed_user_input,
 }
 
 /*
-* Method is used redirect the output of a command to a file, where the commands
-* output is appends to the file name thats user defined.
-*  It can be triggered the >>.
+* Method is used to redirect the output of a command to a file,where the commands
+* output is appended to the end of a file. The append files is based off what
+* the user defines. It can be triggered by the >>.
 *
-* @param parsed_user_input: (Array of Strings)(pointer) represents the entire
-* 														all parsed commands.
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands.
 * @param argv: (Array of Strings)(pointer) representing all the arguments(commands)
-*              for	the execvp().
+*              forthe execvp().
 * @param position: (int) start position in the parsed_user_input.
 */
 void execute_redirect_create(int position, char **parsed_user_input,
@@ -483,6 +488,17 @@ void execute_redirect_create(int position, char **parsed_user_input,
 		dup2(saved_stdout, 1);
 }
 
+/*
+* Method is used to input data from a file into the terminal for a shell command.
+* The input files is based off the user difined name. It can be
+* triggered by the >>.
+*
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands.
+* @param argv: (Array of Strings)(pointer) representing all the arguments(commands)
+*              forthe execvp().
+* @param position: (int) start position in the parsed_user_input.
+*/
 void execute_indirect(int position, char **parsed_user_input, char **argv){
 	//Contents of a file are being redirected to the terminal
 	int saved_stdout = dup(0);
@@ -506,10 +522,10 @@ void execute_indirect(int position, char **parsed_user_input, char **argv){
 
 //--------------------------------CORE LOOPS------------------------------------
 /*
-* Method is the main for the entire shell. This method is responsible for
+* Method is the main loop for the entire shell. This method is responsible for
 * accessing all the logic of the puppy shell. Core Functions: display
 * shell indicator, get user input,then parse user input and store it, lastly
-* executing commands based off the parsed user input.
+* execute commands based off the parsed user input.
 */
 void user_input_loop(){
 	size_t max_user_input_length = MAX_USER_INPUT_LENGTH;//max chars for user input
@@ -540,6 +556,9 @@ void user_input_loop(){
 /*
 * Method is used to print all stored commands from the parsed_user_input
 * array into the terminal for debugging.
+*
+* @param parsed_user_input: (Array of Strings)(pointer) represents all parsed
+* 													commands.
 */
 void print_out_main_array(char **parsed_user_input){
 	int i;
